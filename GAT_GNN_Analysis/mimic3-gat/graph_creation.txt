@@ -1,0 +1,14 @@
+data_creation30112024-132322data_expert_exact_k10_cosine_lstm: Number of nodes: 41902 	 Number of edges: 302450 
+data_creation30112024-132342data_expert_exact_k10_cosine_stat: Number of nodes: 41902 	 Number of edges: 302450 
+data_creation_01122024-112627_data_trivial_k10_cosine_stat: Number of nodes: 41902 	 Number of edges: 41902
+data_creation_01122024-112645_data_trivial_k10_cosine_lstm: Number of nodes: 41902 	 Number of edges: 41902
+data_creation_01122024-131801_data_expert_medium_k10_cosine_stat: Number of nodes: 41902 	 Number of edges: 7053137
+data_creation_01122024-131837_data_expert_medium_k10_cosine_lstm: Number of nodes: 41902 	 Number of edges: 7053137
+data_creation_01122024-131843_data_expert_medium_k10_cosine_stat: Number of nodes: 41902 	 Number of edges: 7053137
+data_creation_01122024-132032_data_expert_medium_k10_cosine_lstm: Number of nodes: 41902 	 Number of edges: 7053137
+data_creation_01122024-132047_data_expert_medium_k10_cosine_stat: Number of nodes: 41902 	 Number of edges: 7053137
+data_creation_01122024-132231_data_expert_medium_k10_cosine_stat: Number of nodes: 41902 	 Number of edges: 7053137
+data_creation_01122024-132307_data_expert_medium_k10_cosine_lstm: Number of nodes: 41902 	 Number of edges: 7053137
+data_creation_01122024-132343_data_expert_medium_k10_cosine_stat: Number of nodes: 41902 	 Number of edges: 7053137
+data_creation_01122024-132432_data_trivial_k10_cosine_stat: Number of nodes: 41902 	 Number of edges: 41902
+data_creation_01122024-132442_data_trivial_k10_cosine_lstm: Number of nodes: 41902 	 Number of edges: 41902

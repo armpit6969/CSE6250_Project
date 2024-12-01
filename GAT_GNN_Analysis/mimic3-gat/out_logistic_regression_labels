@@ -1,0 +1,65 @@
+(mimic3_graph) amit@DESKTOP-TS8MM8I:/mnt/c/Users/Amit/Downloads/CSE6250/project/mimic3/mimic3-benchmarks-GraDSCI23-master$ python -um mimic3models.phenotyping.logistic.main --output_dir mimic3models/phenotyping/logistic
+Namespace(period='all', features='all', grid_search=False, data='/mnt/c/Users/Amit/Downloads/CSE6250/project/mimic3/mimic3-benchmarks-GraDSCI23-master/mimic3models/phenotyping/logistic/../../../data/phenotyping/', output_dir='mimic3models/phenotyping/logistic')
+Reading data and extracting features ...
+/mnt/c/Users/Amit/Downloads/CSE6250/project/mimic3/mimic3-benchmarks-GraDSCI23-master/mimic3models/feature_extractor.py:60: RuntimeWarning: Precision loss occurred in moment calculation due to catastrophic cancellation. This occurs when the data are nearly identical. Results may be unreliable.
+  return np.array([fn(data) for fn in functions], dtype=np.float32)
+train set shape:  (29250, 714)
+validation set shape: (6371, 714)
+test set shape: (6281, 714)
+Imputing missing values ...
+Normalizing the data to have zero mean and unit variance ...
+Starting task 0
+Starting task 1
+Starting task 2
+Starting task 3
+Starting task 4
+Starting task 5
+Starting task 6
+Starting task 7
+Starting task 8
+Starting task 9
+Starting task 10
+Starting task 11
+Starting task 12
+Starting task 13
+Starting task 14
+Starting task 15
+Starting task 16
+Starting task 17
+Starting task 18
+Starting task 19
+Starting task 20
+Starting task 21
+Starting task 22
+Starting task 23
+Starting task 24
+y_true.shape = (29250, 25)
+y_true.shape = (29250, 25)
+ROC AUC scores for labels: [0.7906045  0.88867244 0.74269267 0.71112923 0.76854349 0.7096031
+ 0.69592043 0.74655913 0.75461812 0.76234061 0.87874434 0.76437239
+ 0.69885789 0.66499622 0.72387429 0.74265466 0.76110106 0.72994452
+ 0.69075103 0.74627877 0.69593286 0.79173723 0.86330973 0.82229974
+ 0.88028308]
+ave_auc_micro = 0.813252560354239
+ave_auc_macro = 0.7610328618729122
+ave_auc_weighted = 0.748155331126817
+y_true.shape = (6371, 25)
+y_true.shape = (6371, 25)
+ROC AUC scores for labels: [0.7736185  0.88939144 0.71035978 0.68579906 0.74625021 0.6846499
+ 0.68179671 0.71034785 0.73117035 0.74857103 0.86502732 0.74920177
+ 0.68372076 0.63626713 0.71070298 0.7081528  0.74196851 0.69343772
+ 0.63359685 0.68057478 0.6616032  0.77791243 0.85031051 0.79626879
+ 0.85954696]
+ave_auc_micro = 0.7978019548343743
+ave_auc_macro = 0.7364098941804096
+ave_auc_weighted = 0.7269276747060152
+y_true.shape = (6281, 25)
+y_true.shape = (6281, 25)
+ROC AUC scores for labels: [0.77864247 0.86330128 0.72467739 0.69855548 0.74577119 0.67595648
+ 0.68929125 0.73291435 0.73795504 0.76061813 0.85161488 0.75442794
+ 0.69062775 0.65363635 0.69721392 0.69275622 0.72355079 0.6970546
+ 0.62097513 0.69680498 0.65184424 0.78361217 0.85970791 0.80221189
+ 0.86458672]
+ave_auc_micro = 0.798964785138107
+ave_auc_macro = 0.7379323427581157
+ave_auc_weighted = 0.7302534522137251
