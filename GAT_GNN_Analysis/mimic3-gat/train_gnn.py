@@ -20,8 +20,6 @@ from create_graph import MyOwnDataset
 from torch_geometric.utils import subgraph
 from torch_geometric.nn import ChebConv, GATConv, ClusterGCNConv
 import matplotlib.pyplot as plt
-import seaborn as sns
-import plotly.express as px
 
 
 # Setting the Edge Selection Strategy from the MIMIC3 Benchmark Data Processing Pipeline (Multitask learning and benchmarking with clinical time series data)
@@ -57,7 +55,7 @@ activation_fns = {
 graph_layers = {
     'ChebConv_symK1':{
         'impl': ChebConv,
-        'params': {'default_convs': True, 'K': 1, 'normalization': 'sym', 'heads': 1}
+        'params': {'default_convs': True, 'K': 2, 'normalization': 'sym', 'heads': 1}
     },
     'ClusterGCNConv':{
         'impl': ClusterGCNConv,
