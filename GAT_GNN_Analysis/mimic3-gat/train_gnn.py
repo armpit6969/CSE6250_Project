@@ -17,8 +17,12 @@ from tqdm import tqdm
 from torch_geometric.data import DataLoader, Data, Dataset
 
 from create_graph import MyOwnDataset
-from custom_layers import activation_name_implementation, get_layer_impl_from_layer_type
 from torch_geometric.utils import subgraph
+from torch_geometric.nn import ChebConv, GATConv, ClusterGCNConv
+import matplotlib.pyplot as plt
+import seaborn as sns
+import plotly.express as px
+
 
 # Setting the Edge Selection Strategy from the MIMIC3 Benchmark Data Processing Pipeline (Multitask learning and benchmarking with clinical time series data)
 # Source: https://github.com/ds4dh/mimic3-benchmarks-GraDSCI23/edge_strategies.py
@@ -28,14 +32,14 @@ from torch_geometric.utils import subgraph
 
 
 activation_fns = {
+    'selu': nn.SELU,
+    'celu': nn.CELU,
+    'gelu': nn.GELU,
     # 'relu': nn.ReLU,
     # 'leaky_relu': nn.LeakyReLU,
     # 'sigmoid': nn.Sigmoid,
     # 'tanh': nn.Tanh,
     # 'elu': nn.ELU,
-    'selu': nn.SELU,
-    'celu': nn.CELU,
-    'gelu': nn.GELU,
     # 'softmax': nn.Softmax,
     # 'log_softmax': nn.LogSoftmax,
     # 'prelu': nn.PReLU,
@@ -50,11 +54,26 @@ activation_fns = {
     # 'threshold': nn.Threshold,
 }
 
+graph_layers = {
+    'ChebConv_symK1':{
+        'impl': ChebConv,
+        'params': {'default_convs': True, 'K': 1, 'normalization': 'sym', 'heads': 1}
+    },
+    'ClusterGCNConv':{
+        'impl': ClusterGCNConv,
+        'params': { "diag_lambda": 0.0, 'heads': 1 }
+    },
+    'GATConv':{
+        'impl': GATConv,
+        'params': {'heads': 4}
+    }
+}
 
-
+# Initialize a list to store metrics for each epoch
+all_metrics = []
 
 class myGCN(torch.nn.Module):
-    def __init__(self,hidden_channels, dataset, layer_type, NUM_HIDDEN_LAYERS=1, NUM_MLP_LAYERS=1, POST_NUM_MLP_LAYERS=1, aggr_fn="mean", dropout_rate=0.0, activation_fn_name="gelu", layer_norm_flag=False, model_name = "", **kwargs,):
+    def __init__(self,hidden_channels, dataset, layer_type, NUM_HIDDEN_LAYERS=1, NUM_MLP_LAYERS=1, POST_NUM_MLP_LAYERS=1, aggr_fn="mean", dropout_rate=0.0, activation_fn_name="gelu", model_name = "", **kwargs,):
         
         super().__init__()
 
@@ -65,7 +84,6 @@ class myGCN(torch.nn.Module):
         self.NUM_HIDDEN_LAYERS = NUM_HIDDEN_LAYERS
         self.NUM_MLP_LAYERS = NUM_MLP_LAYERS
         self.POST_NUM_MLP_LAYERS = POST_NUM_MLP_LAYERS
-        self.layer_norm_flag = layer_norm_flag
         self.dropout_rate = dropout_rate
         self.model_name = model_name
 
@@ -73,102 +91,82 @@ class myGCN(torch.nn.Module):
         self.activation_fn = activation_fns[activation_fn_name]()
 
         # Retrieve layer implementation and parameters based on layer_type
-        layer = get_layer_impl_from_layer_type[layer_type]["impl"]
-        layer_params = get_layer_impl_from_layer_type[layer_type]["params"]
+        layer = graph_layers[layer_type]["impl"]
+        layer_params = graph_layers[layer_type]["params"]
         layer_params['aggr'] = aggr_fn
 
         # Optional Layer Normalization
-        self.layer_norm = torch.nn.LayerNorm(hidden_channels) if layer_norm_flag else None
-
-        # Initialize Hidden Graph Convolutional Layers
-        self.hidden_layers = self._build_hidden_layers(layer, hidden_channels, layer_params)
-
-        # Initialize MLP Layers Before Graph Convolutions
-        self.mlp_layers = self._build_mlp_layers(dataset.num_features, hidden_channels, NUM_MLP_LAYERS)
-
-        # Initialize MLP Layers After Graph Convolutions
-        self.post_mlp_layers = self._build_post_mlp_layers(dataset.num_features, hidden_channels, POST_NUM_MLP_LAYERS)
-
-        # Final Linear Layer for Classification
-        self.lin1 = torch.nn.Linear(hidden_channels, dataset.num_classes)
-        torch.nn.init.xavier_uniform_(self.lin1.weight)
-
-    def _build_hidden_layers(self, layer, hidden_channels, layer_params):
-
+        self.layer_norm = torch.nn.LayerNorm(hidden_channels)
+        self.activation_fn = activation_fns[activation_fn_name]()
+        self.model_name = model_name
         layers = OrderedDict()
-        for i in range(self.NUM_HIDDEN_LAYERS):
-            print(f"Adding graph hidden layer: {i}")
+        for i in range(NUM_HIDDEN_LAYERS):
+            print("added graph hidden layer: ", i)
             layers[str(i)] = layer(hidden_channels, hidden_channels, **layer_params)
-            # Initialize weights using Xavier Uniform
-            for param in layers[str(i)].parameters():
-                if param.dim() > 1:
-                    torch.nn.init.xavier_uniform_(param)
-
-        return Sequential(layers)
-
-    def _build_mlp_layers(self, input_dim, hidden_channels, num_layers):
+            for k in layers[str(i)].state_dict().keys():
+                torch.nn.init.xavier_uniform_(
+                    layers[str(i)].state_dict()[k].reshape(1, -1)
+                ).reshape(-1)
+        self.hidden_layers = Sequential(layers)
 
         mlp_layers = OrderedDict()
-        for i in range(num_layers):
-            print(f"Adding MLP layer: {i}")
+        for i in range(NUM_MLP_LAYERS):
+            print("added mlp layer: ", i)
             if i == 0:
-                mlp_layers[str(i)] = torch.nn.Linear(input_dim, hidden_channels)
+                mlp_layers[str(i)] = torch.nn.Linear(
+                    dataset.num_features, hidden_channels
+                )
             else:
                 mlp_layers[str(i)] = torch.nn.Linear(hidden_channels, hidden_channels)
             torch.nn.init.xavier_uniform_(mlp_layers[str(i)].weight)
-
-        return Sequential(mlp_layers)
-
-    def _build_post_mlp_layers(self, input_dim, hidden_channels, num_layers):
+        self.mlp_layers = Sequential(mlp_layers)
 
         post_mlp_layers = OrderedDict()
-        for i in range(num_layers):
-            print(f"Adding post-MLP layer: {i}")
+        for i in range(POST_NUM_MLP_LAYERS):
+            print("added post-mlp layer: ", i)
             if i == 0:
                 post_mlp_layers[str(i)] = Sequential(
-                    torch.nn.LayerNorm(input_dim + hidden_channels),
-                    torch.nn.Linear(input_dim + hidden_channels, hidden_channels)
+                    torch.nn.LayerNorm(dataset.num_features + hidden_channels * layer_params['heads']),
+                    torch.nn.Linear(dataset.num_features + hidden_channels * layer_params['heads'], hidden_channels)
                 )
             else:
                 post_mlp_layers[str(i)] = Sequential(
-                    torch.nn.LayerNorm(hidden_channels),
-                    torch.nn.Linear(hidden_channels, hidden_channels)
+                    torch.nn.LayerNorm(hidden_channels * layer_params['heads']),
+                    torch.nn.Linear(hidden_channels * layer_params['heads'], hidden_channels)
                 )
-            # Initialize weights using Xavier Uniform
             torch.nn.init.xavier_uniform_(post_mlp_layers[str(i)][1].weight)
-            
-        return Sequential(post_mlp_layers)
+        self.post_mlp_layers = Sequential(post_mlp_layers)
+        self.lin1 = torch.nn.Linear(hidden_channels,dataset.num_classes)
+        torch.nn.init.xavier_uniform_(self.lin1.weight)
 
     def forward(self, raw, edge_index, device, edge_weight=None):
 
         # Move edge indices to the specified device
         edge_index = edge_index.to(device)
 
-        x = raw
-
         # MLP Layers Before Graph Convolutions
+        x = raw 
         for i in range(self.NUM_MLP_LAYERS):
-            x = self.mlp_layers[str(i)](x)
+            x = self.mlp_layers[i](x)
             x = self.activation_fn(x)
             x = F.dropout(x, p=self.dropout_rate, training=self.training)
 
-        node_embeddings = []
         # Hidden Graph Convolutional Layers
-        for i in range(self.NUM_HIDDEN_LAYERS):
+        node_embeddings = []
+        for i in range(self.NUM_HIDDEN_LAYERS):  # 0
             if edge_weight is None:
-                node_embedding = self.hidden_layers[str(i)](x, edge_index)
+                node_embeddings = self.hidden_layers[i](x, edge_index)
             else:
-                node_embedding = self.hidden_layers[str(i)](x, edge_index, edge_weight)
-            node_embeddings.append(node_embedding)
-            x = self.activation_fn(node_embedding)
+                node_embeddings = self.hidden_layers[i](x, edge_index, edge_weight)
+            x = self.activation_fn(node_embeddings)
             x = F.dropout(x, p=self.dropout_rate, training=self.training)
-
+        
         # Concatenate raw features with final embeddings
         x = torch.cat((raw, x), dim=1)
 
         # Post MLP Layers After Graph Convolutions
         for i in range(self.POST_NUM_MLP_LAYERS):
-            x = self.post_mlp_layers[str(i)](x)
+            x = self.post_mlp_layers[i](x)
             x = self.activation_fn(x)
             x = F.dropout(x, p=self.dropout_rate, training=self.training)
 
@@ -176,10 +174,9 @@ class myGCN(torch.nn.Module):
         x = self.lin1(x)
 
         # Apply Sigmoid Activation
-        return torch.sigmoid(x), node_embeddings
+        return x.sigmoid(), node_embeddings
 
-
-def train(model, data, train_params, model_dir, training_mode, model_path=None, **kwargs):
+def train(model, data, train_params, model_dir, train_mode, model_path=None, **kwargs):
 
     # Set global access variables
     global latest_loss, max_patience_count
@@ -206,7 +203,7 @@ def train(model, data, train_params, model_dir, training_mode, model_path=None, 
 
     # Initialize NeighborSampler
     train_loader = NeighborSampler(
-        data.edge_index if training_mode == 'transductive' else subgraph(train_nodes, data.edge_index, relabel_nodes=True)[0],
+        data.edge_index if train_mode == 'transductive' else subgraph(train_nodes, data.edge_index, relabel_nodes=True)[0],
         sizes=[num_nodes],
         batch_size=batch_size,
         shuffle=True
@@ -258,10 +255,26 @@ def train(model, data, train_params, model_dir, training_mode, model_path=None, 
             
             # Forward Pass on validation data
             logits, _ = model(data.x, data.edge_index, device)
+            val_logits = logits[data.val_mask].float()
+            val_labels = data.y[data.val_mask].float()
+            validation_loss = loss_fn(val_logits, val_labels)
+            writer.add_scalar('Loss/val', validation_loss.item(), epoch)
 
-            # Compute Validation Loss
-            validation_loss = loss_fn(logits[data.val_mask], data.y[data.val_mask].float())
-            writer.add_scalar('Loss/val', validation_loss, epoch)
+            # Calculate AUC metrics
+            scores = torch.sigmoid(val_logits).cpu().numpy()
+            truth_labels = val_labels.cpu().numpy()
+            metrics_res = evaluate(scores, truth_labels, epoch)
+
+        # Append metrics
+        to_save = {
+            "gnn": train_params['layer'],
+            **{i: metrics_res["cls_auc"][i] for i in range(len(metrics_res["cls_auc"]))},
+            "wt_auc": metrics_res["wt_auc"],
+            "micro_auc": metrics_res["micro_auc"],
+            "macro_auc": metrics_res["macro_auc"],
+            "Epoch": epoch
+        }
+        all_metrics.append(to_save)
 
         print(f"Epoch: {epoch:03d}, Train Loss: {total_loss:.4f}, Val Loss: {validation_loss.item():.4f}")
 
@@ -277,40 +290,46 @@ def train(model, data, train_params, model_dir, training_mode, model_path=None, 
 
             # Update most current loss to current validation loss
             latest_loss = validation_loss
-        
+            print(f"Epoch {epoch}: Validation loss improved. Model saved to {current_model} and best_model.pt.")
+
         elif (validation_loss >= latest_loss):
 
             # Decrease patience count if no improvement
             max_patience_count -= 1
+            print(f"Epoch {epoch}: Validation loss did not improve. Patience remaining: {max_patience_count}")
 
             # If patience is exhausted, exit the training loop
-            if max_patience_count == 0: break
+            if max_patience_count == 0: 
+                print("Early stopping triggered.")
+                break
 
-        if epoch == max_epochs: break
+        if epoch == max_epochs: 
+            print(f"Reached maximum epochs: {max_epochs}. Stopping training.")
+            break
 
     return optimizer, epoch, latest_loss
 
 
-def test(model, data, model_name, train_params):
+def test(model, data, model_name, train_params, epoch):
     print("Testing model")
 
     model.eval()
     with torch.no_grad():
         
         # Run model on test data
-        logits, node_embeddings = model(data.x, data.edge_index, device)
-        logits = logits[data.test_mask] # Filter output from test set
-        scores = logits.cpu().detach().numpy() # Move logits to CPU and convert to numpy array
-
-        print(f"Test Loss: {loss_fn(logits, data.y[data.test_mask].float()):.4f}")
-
-        # Use mask on dataset to select test labels
+        logits, node_embeddings = model(data.x.to(device), data.edge_index.to(device), device)
+        test_logits = logits[data.test_mask].float()
+        scores = torch.sigmoid(test_logits).cpu().detach().numpy()
         truth_labels = data.y[data.test_mask].cpu().detach().numpy()
-        
-        return scores, node_embeddings, truth_labels
+
+        test_loss = loss_fn(test_logits, data.y[data.test_mask].float())
+        writer.add_scalar('Loss/test', test_loss.item(), epoch)
+        print(f"Test Loss: {test_loss.item():.4f}")
+
+    return scores, node_embeddings, truth_labels
 
 
-def evaluate(scores, truth_labels):
+def evaluate(scores, truth_labels, epoch):
     print("Evaluating model")
 
     cls_auc = metrics.roc_auc_score(truth_labels, scores, average=None)
@@ -343,24 +362,28 @@ def run_model(dataset, config_params, train_params, layer, model_dir):
     print("Model:\n\n", model)
 
     # Run train
-    optimizer, epoch, validation_loss = train(model, data, train_params, model_dir, training_mode=training_mode)
+    optimizer, epoch, validation_loss = train(model, data, train_params, model_dir, train_mode=training_mode)
     
     # Select best model (lowest loss) from saved dictionary
-    best_model = min(saved, key=saved.get)
-    model.load_state_dict(torch.load(best_model))
-    print("Best model: ", best_model)
+    if saved:
+        best_model = min(saved, key=saved.get)
+        model.load_state_dict(torch.load(best_model))
+        print("Best model loaded from:", best_model)
+    else:
+        print("No improvement detected during training. Using the last epoch's model.")
 
     # Run test
-    scores, node_embeddings, truth_labels = test(model, data, layer, train_params)
-    metrics_res = evaluate(scores, truth_labels)
+    scores, node_embeddings, truth_labels = test(model, data, layer, train_params, epoch)
+    metrics_res = evaluate(scores, truth_labels, epoch)
 
     return model, metrics_res, node_embeddings
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Run LECONV")
+    parser = argparse.ArgumentParser(description="Run GATConv")
     parser.add_argument("--data_folder", type=str, required=True, help="Train/val/test PyG dataset folder")
-    parser.add_argument("--model", type=str, default="LEConv")
+    parser.add_argument("--model", type=str, default="GATConv")
+    parser.add_argument("--edge_strategy", type=str, default="trivial")
     parser.add_argument("--activation", type=str, default="celu")
     parser.add_argument("--aggr", type=str, default="mean")
     parser.add_argument("--epochs", type=int, default=50)
@@ -397,6 +420,8 @@ if __name__ == "__main__":
     global device
     global writer
     global FOLDER
+    global training_mode
+    global experiment_name
 
     saved = {}
     DD_MM_YYYY = datetime.now().strftime("%d_%m_%Y")
@@ -413,6 +438,7 @@ if __name__ == "__main__":
 
     # Model configuration
     layer = args.model
+    edge_strategy = args.edge_strategy 
     model_name = args.model_name
     model_folder = args.model_folder
     activation = args.activation
@@ -449,7 +475,7 @@ if __name__ == "__main__":
     MODEL_DIR = f"{model_folder}"
     os.makedirs(MODEL_DIR, exist_ok=True)
     data_folder = args.data_folder
-    dataset = MyOwnDataset(data_folder)
+    dataset = MyOwnDataset(data_folder, edge_strategy_name=edge_strategy)
     print('Tensorboard logs saved in directory: ', MODEL_DIR)
     print('Model is saved in directory: ', FNAME)
     print("Data is extracted from directory: ", data_folder)
@@ -497,13 +523,81 @@ if __name__ == "__main__":
     model, metrics_res, node_embeddings = run_model(dataset, config_params, train_params, layer, MODEL_DIR)
     to_save = {
         **{"gnn": layer},
-        **{i: metrics_res["auc_c"][i] for i in range(len(metrics_res["auc_c"]))},
+        **{i: metrics_res["cls_auc"][i] for i in range(len(metrics_res["cls_auc"]))},
         **{
-            "aucw": metrics_res["aucw"],
-            "auc_micro": metrics_res["auc_micro"],
-            "auc_macro": metrics_res["auc_macro"],
+            "wt_auc": metrics_res["wt_auc"],
+            "micro_auc": metrics_res["micro_auc"],
+            "macro_auc": metrics_res["macro_auc"],
         },
     }
 
     df = pd.DataFrame(to_save, index=[0])
     print(df.T)
+
+
+    # Inside your training loop, after computing 'to_save'
+    df_all = pd.DataFrame(all_metrics)
+    final_metrics = os.path.join(MODEL_DIR, experiment_name + "_final_metrics.csv")
+    df_all.to_csv(final_metrics, index=False)
+    print(f"Saved metrics to {final_metrics}")
+
+    # Plot Aggregated AUC Scores
+    plt.figure(figsize=(10, 6))
+    plt.plot(df_all['Epoch'], df_all['wt_auc'], label='Weighted AUC')
+    plt.plot(df_all['Epoch'], df_all['micro_auc'], label='Micro AUC')
+    plt.plot(df_all['Epoch'], df_all['macro_auc'], label='Macro AUC')
+    plt.xlabel('Epoch')
+    plt.ylabel('AUC Score')
+    plt.title('Aggregated AUC Scores per Epoch')
+    plt.legend()
+    plt.grid(True)
+    aggregated_auc_path = os.path.join(MODEL_DIR, experiment_name + "_aggregated_auc_per_epoch.png")
+    plt.savefig(aggregated_auc_path)
+    plt.close()
+    print(f"Saved Aggregated AUC plot to {aggregated_auc_path}")
+
+    # Plot Class-wise AUC Scores
+    class_columns = [col for col in df_all.columns if isinstance(col, int) or col.isdigit()]
+
+    plt.figure(figsize=(15, 10))
+    for cls in class_columns:
+        plt.plot(df_all['Epoch'], df_all[cls], label=f'Class {cls}')
+    plt.xlabel('Epoch')
+    plt.ylabel('AUC Score')
+    plt.title('Class-wise AUC Scores per Epoch')
+    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize='small')
+    plt.grid(True)
+    plt.tight_layout()
+    class_auc_path = os.path.join(MODEL_DIR, experiment_name + "_class_wise_auc_per_epoch.png")
+    plt.savefig(class_auc_path)
+    plt.close()
+    print(f"Saved Class-wise AUC plot to {class_auc_path}")
+#     gnn         GATConv
+# 0          0.649144
+# 1          0.800848
+# 2          0.580024
+# 3          0.620693
+# 4          0.654396
+# 5          0.565983
+# 6          0.534775
+# 7          0.602258
+# 8          0.663096
+# 9          0.738213
+# 10         0.750269
+# 11         0.659286
+# 12         0.666205
+# 13         0.612111
+# 14         0.669749
+# 15         0.621542
+# 16         0.665115
+# 17         0.532809
+# 18         0.555857
+# 19         0.553855
+# 20         0.602041
+# 21         0.670953
+# 22         0.849973
+# 23          0.74076
+# 24         0.786974
+# wt_auc     0.657282
+# micro_auc  0.726319
+# macro_auc  0.653877
