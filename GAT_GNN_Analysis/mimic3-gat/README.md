@@ -12,6 +12,8 @@ Option 1:
 Option 2:
 1. Please pull the project directory from the Github repository at `https://github.com/armpit6969/CSE6250_Project/` and navigate to the `GAT_GNN_Analysis/mimic3-gat directory`. Follow the procedure in "Details" below to create the datasets and run the benchmarks.
 
+--- 
+
 The included code was adapted from "Leveraging patient similarities via graph neural networks to predict phenotypes from temporal data" adaptation of MIMIC-III Data Pre-Processing Pipeline for GNN. The code was refactored and extraneous code relevant to the original paper's benchmark of GNN was removed. Furthermore, some minor modifications to the Data Pre-Processing Pipeline were added to get it running (potentially due to later revisions in MIMIC-III ie. v1.4). Furthermore, this enabled a fair comparison between GNN and GAT on a level playing field, based on the same replicated EHR MIMIC-III data. 
 
 ### Source code for the implementation of the paper: 
@@ -20,6 +22,8 @@ The included code was adapted from "Leveraging patient similarities via graph ne
 1. [Read the paper on IEEE Xplore](https://ieeexplore.ieee.org/document/10302556)  
 2. [GitHub repository for original MIMIC-III Data Pre-Processing Pipeline](https://github.com/YerevaNN/mimic3-benchmarks)
 3. [GitHub repository for adapted MIMIC-III Data Pre-Processing Pipeline adapted for GNN](https://github.com/ds4dh/mimic3-benchmarks-GraDSCI23)
+
+---
 
 <details>
   
