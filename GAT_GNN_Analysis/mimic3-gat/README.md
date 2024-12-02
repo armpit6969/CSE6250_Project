@@ -1,4 +1,4 @@
-# Graph Attention Networks (GAT) for Node Classification
+# Graph Attention Networks (GAT) and GNN Comparative Analysis
 
 This directory contains the comparative analysis between the **Graph Attention Network (GAT)** and the CHEB/CGCN from "Leveraging patient similarities via graph neural networks to predict phenotypes from temporal data" adaptation of MIMIC-III Data Pre-Processing Pipeline for GNN. Here, using a standardized graph dataset produced from the MIMIC-III pipeline, we modified and run some scripts from the original work to compare the performance of the model.
 
