@@ -1,6 +1,6 @@
 # Graph Attention Networks (GAT) for Node Classification
 
-This repository contains the implementation of the **Graph Attention Network (GAT)**, designed for node classification tasks on graph-structured data. The project replicates the experiments from the paper ["Graph Attention Networks"](https://arxiv.org/abs/1710.10903) by Veličković et al. The implementation supports the **Cora**, **Citeseer**, and **Pubmed** citation network datasets, providing a reproducible pipeline for training, evaluation, and visualization.
+This directory contains the implementation of the **Graph Attention Network (GAT)**, designed for node classification tasks on graph-structured data. The project replicates the experiments from the paper ["Graph Attention Networks"](https://arxiv.org/abs/1710.10903) by Veličković et al. The implementation supports the **Cora**, **Citeseer**, and **Pubmed** citation network datasets, providing a reproducible pipeline for training, evaluation, and visualization.
 
 ## Features
 - Full implementation of GAT with multi-head attention and LeakyReLU-based self-attention.
@@ -19,7 +19,7 @@ Ensure you have **Python 3.8+** installed. Use the following command to install 
 The dataset preprocessing, training, and evaluation steps are integrated into a single script. To run the entire pipeline, use the following commands:
 
 ### Step-by-Step Instructions
-1. Clone the repository: `git clone https://github.com/mehulgoenka/CSE6250_Project.git` and navigate to the directory: `cd Code_v0.1`.
+1. Clone the repository: `git clone https://github.com/mehulgoenka/CSE6250_Project.git` or `git clone https://github.com/armpit6969/CSE6250_Project.git` and navigate to the directory: `cd Code_v0.1`.
 2. Install dependencies: `pip install -r requirements.txt`.
 3. Run the training pipeline: `python gat_transductive.py --dataset cora --epochs 1000`.
 4. Visualize results: Open the generated `.png` files in the project directory to view accuracy and loss trends.
