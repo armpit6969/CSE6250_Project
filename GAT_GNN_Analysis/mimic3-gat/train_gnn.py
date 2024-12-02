@@ -366,7 +366,7 @@ def run_model(dataset, config_params, train_params, layer, model_dir):
     if saved:
         # best_model = min(saved, key=saved.get)
         # print("Best model loaded from:", best_model)
-        model.load_state_dict(torch.load("{model_dir}/best_model.pt"))
+        model.load_state_dict(torch.load(f"{model_dir}/best_model.pt"))
         print("Best model loaded")
     else:
         print("No improvement detected during training. Using the last epoch's model.")
