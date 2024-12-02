@@ -4,7 +4,6 @@ physionet.org/*
 pytorch_states_2024-11-30 11:00:09/*
 runs_2024-11-30/*
 graphs/*
-graph_model/*
 
 A_expert_edges_exact.pk
 A_m2_expert_edges_inter_category.pk
@@ -22,8 +21,6 @@ dict_dfs_cat.pk
 !runs_2024-11-30/.gitkeep
 !graphs/
 !graphs/.gitkeep
-!graph_model/
-!graph_model/.gitkeep
 ### Adapt original .gitignore from source code:
 
 
