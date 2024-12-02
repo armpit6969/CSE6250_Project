@@ -283,8 +283,8 @@ def train(model, data, train_params, model_dir, train_mode, model_path=None, **k
 
             # Update Saved Model Dictionary
             saved[current_model] = validation_loss
-            torch.save(model.state_dict(), f"{current_model}")
-            torch.save(model.state_dict(), f"{model_dir}/best_model.pt")
+            # torch.save(model.state_dict(), f"{current_model}")
+            if save_model: torch.save(model.state_dict(), f"{model_dir}/best_model.pt")
 
             # Update most current loss to current validation loss
             latest_loss = validation_loss
@@ -420,6 +420,9 @@ if __name__ == "__main__":
     global FOLDER
     global training_mode
     global experiment_name
+    global save_model
+
+    save_model = False
 
     saved = {}
     DD_MM_YYYY = datetime.now().strftime("%d_%m_%Y")
@@ -506,9 +509,9 @@ if __name__ == "__main__":
         **config_params,
     }
     
-    FPARAMS = os.path.join(MODEL_DIR, "model_params.pt")
-    torch.save(model_params, os.path.join(MODEL_DIR, "model_params.pt"))
-    print(f"Model parameters are saved in file: {FPARAMS}")
+    # FPARAMS = os.path.join(MODEL_DIR, "model_params.pt")
+    # torch.save(model_params, os.path.join(MODEL_DIR, "model_params.pt"))
+    # print(f"Model parameters are saved in file: {FPARAMS}")
 
     # Device configuration
     cuda = args.cuda
