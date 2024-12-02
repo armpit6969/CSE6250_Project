@@ -364,9 +364,10 @@ def run_model(dataset, config_params, train_params, layer, model_dir):
     
     # Select best model (lowest loss) from saved dictionary
     if saved:
-        best_model = min(saved, key=saved.get)
-        model.load_state_dict(torch.load(best_model))
-        print("Best model loaded from:", best_model)
+        # best_model = min(saved, key=saved.get)
+        # print("Best model loaded from:", best_model)
+        model.load_state_dict(torch.load("{model_dir}/best_model.pt"))
+        print("Best model loaded")
     else:
         print("No improvement detected during training. Using the last epoch's model.")
 
@@ -422,7 +423,7 @@ if __name__ == "__main__":
     global experiment_name
     global save_model
 
-    save_model = False
+    save_model = True
 
     saved = {}
     DD_MM_YYYY = datetime.now().strftime("%d_%m_%Y")
