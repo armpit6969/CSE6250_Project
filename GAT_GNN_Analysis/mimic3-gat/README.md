@@ -1,3 +1,7 @@
+# GAT-GNN Comparative Analysis
+
+This directory contains the comparative analysis between the **Graph Attention Network (GAT)** and the CHEB/CGCN from "Leveraging patient similarities via graph neural networks to predict phenotypes from temporal data" adaptation of MIMIC-III Data Pre-Processing Pipeline for GNN. Here, using a standardized graph dataset produced from the MIMIC-III pipeline, we modified and run some scripts from the original work to compare the performance of the model.
+
 To run the project
 
 Option 1:
@@ -6,7 +10,7 @@ Option 1:
 3. Follow the instructions in "Details" below
 
 Option 2:
-1. Please pull the project directory from the Github repository:
+1. Please pull the project directory from the Github repository at `https://github.com/armpit6969/CSE6250_Project/` and navigate to the `GAT_GNN_Analysis/mimic3-gat directory`. Follow the procedure in "Details" below to create the datasets and run the benchmarks.
 
 <details>
   
